@@ -1,4 +1,4 @@
-1) PotHole detector - Instance segmentation tool, capable of identifying and tagging potholes. Trained on custom dataset of 610 images and validation set of 130 images. Can be used in aerial survey of urban roads if trained for low light application(daylight surveys are tough due to traffic congestion). 
+1) ***PotHole detector*** - Instance segmentation tool, capable of identifying and tagging potholes. Trained on custom dataset of 610 images and validation set of 130 images. Can be used in aerial survey of urban roads if trained for low light application(daylight surveys are tough due to traffic congestion). 
 ------
 About YOLO
 -------
