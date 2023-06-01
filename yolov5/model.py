@@ -48,6 +48,7 @@ class Conv(nn.Module):
 class C3(nn.Module):
   def __init__(self,c1,c2, n=1, shortcut=True, g=1, e=0.5):
     super().__init__()
+    c_ = int(c2 * e)  # hidden channels
     self.cv1 = Conv(c1,c_,1,1)
     self.cv2 = Conv(c_, c_,1, 1)
     self.m = nn.Sequential(*(Bottleneck(c_, c_, shortcut, g, e=1.0) for _ in range(n)))
@@ -72,3 +73,31 @@ class SPPF(nn.Module):
         y1 = self.m(x)
         y2 = self.m(y1)
         return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
+class YOLOV5m(nn.Module):
+    def __init__(self, c_out = b, nc=3, anchors=(),ch=(), inference=False):
+        super().__init__()
+        self.inference = inference
+        self.backbone = nn.ModuleList()
+        self.backbone += [
+            Conv(3, b ,6, 2, 2),
+            Conv(b, b*2, 3, 2, 1),
+            C3(b*2, b*2, n=2),
+            Conv(b*2, b*4, 3, 2, 1),
+            C3(b*4, b*4, n=4),
+            Conv(b*4, b*8, 3, 2, 1),
+            C3(b*8, b*8, n=6),
+            Conv(b*8, b*16, 3, 2, 1),
+            C3(b*16, b*16, n=2),
+            SPPF(b*16, b*16)
+        ]
+        self.neck = nn.ModuleList()
+        self.neck += [
+            CBL(b*16, b*8, 1, 1, 0),
+            C3(b*16, b*8, n=2,shortcut=False, e=0.25),
+            CBL(b*8, b*4, 1, 1, 0),
+            C3(b*8, b*4, n=2, shortcut=False, e=0.25),
+            CBL(b*4, b*4, 3, 2, 1),
+            C3(b*8, b*8, n=2, shortcut=False),
+            CBL(b*8, b*8, 3, 2, 1),
+            C3(b*16, b*16, n=2, shortcut=False)
+        ]
