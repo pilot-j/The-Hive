@@ -101,3 +101,34 @@ class YOLOV5m(nn.Module):
             CBL(b*8, b*8, 3, 2, 1),
             C3(b*16, b*16, n=2, shortcut=False)
         ]
+        def forward(self, x):
+        assert x.shape[2] % 32 == 0 and x.shape[3] % 32 == 0, "Width and Height aren't divisible by 32!" #assertion error
+        backbone_connection = [] #output from backbone, fed to neck
+        neck_connection = [] #output from neck
+        outputs = [] #fed to head blocks
+        for idx, layer in enumerate(self.backbone):
+            # takes the out of the 2nd and 3rd C3 block and stores it
+            x = layer(x)
+            if idx in [4, 6]:
+                backbone_connection.append(x)
+
+        for idx, layer in enumerate(self.neck):
+            if idx in [0, 2]:
+                x = layer(x)
+                neck_connection.append(x)
+                x = nn.Upsample(scale_factor=2, mode='nearest')(x)
+                #x = Resize([x.shape[2]*2, x.shape[3]*2], interpolation=InterpolationMode.NEAREST)(x)
+                x = torch.cat([x, backbone_connection.pop(-1)], dim=1)
+
+            elif idx in [4, 6]:
+                x = layer(x)
+                x = torch.cat([x, neck_connection.pop(-1)], dim=1)
+
+            elif isinstance(layer, C3) and idx > 2:
+                x = layer(x)
+                outputs.append(x)
+
+            else:
+                x = layer(x)
+                
+        return self.head(outputs)
