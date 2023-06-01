@@ -6,6 +6,21 @@ from torchvision.transforms import InterpolationMode
 import config
 from utils.utils import check_size, count_parameters
 
+class Focus(nn.Module):
+    def __init__(self, c1, c2, k=1, s=1, p=None, g=1, act=True):  
+        super().__init__()
+        self.conv = Conv(c1 * 4, c2, k, s, p, g, act=act)
+        
+    def forward(self, x):  #during concat channels add
+        return self.conv(torch.cat((x[..., ::2, ::2], x[..., 1::2, ::2], x[..., ::2, 1::2], x[..., 1::2, 1::2]), 1))
+        '''
+        Official documentation defines a class Contract with param gain. 
+        gain = a, downsamples height and width channel by factor a.
+        self.contract= Contract(gain=2)
+        //
+        return self.conv(self.contract(x))
+        '''
+     
 class Conv(nn.Module):
     default_act = nn.SiLU()
     def __init__(self, c1, c2, k =1, s=1, p='valid' , g=1 , d=1, act= True):
