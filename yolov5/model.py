@@ -132,3 +132,63 @@ class YOLOV5m(nn.Module):
                 x = layer(x)
                 
         return self.head(outputs)
+    class HEADS(nn.Module):
+    def __init__(self, nc=80, anchors=(), ch=()):  # detection layer
+        super(HEADS, self).__init__()
+        self.nc = nc  # number of classes
+        self.nl = len(anchors)  # number of detection layers
+        self.naxs = len(anchors[0]) # number of anchors per scale
+        self.stride = [8, 16, 32]
+
+        # anchors are divided by the stride (anchors_for_head_1/8, anchors_for_head_1/16 etc.)
+        anchors_ = torch.tensor(anchors).float().view(self.nl, -1, 2) / torch.tensor(self.stride).repeat(6, 1).T.reshape(3, 3, 2)
+        self.register_buffer('anchors', anchors_) 
+
+        self.out_convs = nn.ModuleList()
+        for in_channels in ch:
+            self.out_convs += [
+                nn.Conv2d(in_channels=in_channels, out_channels=(5+self.nc) * self.naxs, kernel_size=1)
+            ]
+
+    def forward(self, x):
+        for i in range(self.nl):
+            x[i] = self.out_convs[i](x[i])
+            bs, _, grid_y, grid_x = x[i].shape
+            x[i] = x[i].view(bs, self.naxs, (5+self.nc), grid_y, grid_x).permute(0, 1, 3, 4, 2).contiguous()
+
+        return x
+    def cells_to_bboxes(predictions, anchors, strides):
+    num_out_layers = len(predictions)
+    grid = [torch.empty(0) for _ in range(num_out_layers)]  # initialize
+    anchor_grid = [torch.empty(0) for _ in range(num_out_layers)]  # initialize   
+    all_bboxes = []
+    for i in range(num_out_layers):
+        bs, naxs, ny, nx, _ = predictions[i].shape
+        stride = strides[i]
+        grid[i], anchor_grid[i] = make_grids(anchors, naxs, ny=ny, nx=nx, stride=stride, i=i)
+
+        layer_prediction = predictions[i].sigmoid()
+        
+        obj = layer_prediction[..., 4:5]
+        xy = (2 * (layer_prediction[..., 0:2]) + grid[i] - 0.5) * stride
+        wh = ((2*layer_prediction[..., 2:4])**2) * anchor_grid[i]
+        best_class = torch.argmax(layer_prediction[..., 5:], dim=-1).unsqueeze(-1)
+        
+        scale_bboxes = torch.cat((best_class, obj, xy, wh), dim=-1).reshape(bs, -1, 6)
+        all_bboxes.append(scale_bboxes)
+
+    return torch.cat(all_bboxes, dim=1)
+ 
+
+def make_grids(anchors, naxs, stride, nx=20, ny=20, i=0):
+    
+    x_grid = torch.arange(nx)
+    x_grid = x_grid.repeat(ny).reshape(ny, nx)
+    y_grid = torch.arange(ny).unsqueeze(0)
+    y_grid = y_grid.T.repeat(1, nx).reshape(ny, nx)
+    xy_grid = torch.stack([x_grid, y_grid], dim=-1)
+    xy_grid = xy_grid.expand(1, naxs, ny, nx, 2)
+    
+    anchor_grid = (anchors[i]*stride).reshape((1, naxs, 1, 1, 2)).expand(1, naxs, ny, nx, 2)
+
+    return xy_grid, anchor_grid
