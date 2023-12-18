@@ -2,7 +2,8 @@
 
 ### Todo
 
-- [x] Add executable notebook file  
+- [x] Add executable notebook file
+- [ ] Implement FlastAttention in place of vanilla attention  
 - [x] Training on full dataset 
 - [ ] Add python files that can be executed on system (under progress)
 - [ ] Create web app that can take user prompt and generate short story using StreamLit
