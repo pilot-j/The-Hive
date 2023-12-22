@@ -1,5 +1,6 @@
 # TODO.md
 
+
 ### Todo
 
 - [x] Add executable notebook file
@@ -14,6 +15,7 @@
 
 # GPT-Inspired Story Generator
 
+![image](https://github.com/pilot-j/The-Hive/assets/120032562/7b5b9d65-ecb0-44d7-bbd6-1388a1328afb)
 ## Introduction
 
 This project is an attempt into building a generative pre-trained language model inspired by the principles of GPT (Generative Pre-trained Transformer). This is an autoregressive model capable of generating coherent English text. Here, I take the opportunity to reproduce(and test) the claims of this interesting research paper ["TinyStories: How Small Can Language Models Be and Still Speak Coherent English?"](https://arxiv.org/pdf/2305.07759.pdf).
